@@ -485,17 +485,21 @@
 
       function combineTradesAndTransfers(trades, transfers) {
         let combined = [];
-        for (let index = 0; index < trades.length; index++) {
-          const trade = trades[index];
-          combined.push(Object.assign({
-            op: trade.quantity > 0 ? "BUY" : "SELL"
-          }, trade));
+        if (trades) {
+          for (let index = 0; index < trades.length; index++) {
+            const trade = trades[index];
+            combined.push(Object.assign({
+              op: trade.quantity > 0 ? "BUY" : "SELL"
+            }, trade));
+          }
         }
-        for (let index = 0; index < transfers.length; index++) {
-          const transfer = transfers[index];
-          combined.push(Object.assign({
-            op: transfer.quantity > 0 ? "TRANSFER IN" : "TRANSFER OUT"
-          }, transfer));
+        if (transfers) {
+          for (let index = 0; index < transfers.length; index++) {
+            const transfer = transfers[index];
+            combined.push(Object.assign({
+              op: transfer.quantity > 0 ? "TRANSFER IN" : "TRANSFER OUT"
+            }, transfer));
+          }
         }
 
         var sorted = combined.sort((a, b) => a.date < b.date ? -1 : 1);
@@ -511,6 +515,7 @@
           date: new Date(Date.parse(val["Settle Date"]))
         }));
         console.log('deposits', deposits);
+        const sorted = deposits.sort((a, b) => a.date < b.date ? -1 : 1);
         return deposits;
       }
 
@@ -591,19 +596,21 @@
       }
 
       function combineDividendsAndWitholdingTax(dividends, withholdingTax) {
-        let taxes = withholdingTax.map(x => x);//clone
+        let taxes = (withholdingTax || []).map(x => x);//clone
         var combined = [];//dividends.map(x => x);
-        for (let index = 0; index < dividends.length; index++) {
-          const dividend = dividends[index];
-          combined.push(dividend);
-          const taxIndex = taxes.findIndex(item => item.symbol == dividend.symbol && item.date.getTime() == dividend.date.getTime());
-          if (taxIndex == -1) {
-            continue;//not taxed
+        if (dividends) {
+          for (let index = 0; index < dividends.length; index++) {
+            const dividend = dividends[index];
+            combined.push(dividend);
+            const taxIndex = taxes.findIndex(item => item.symbol == dividend.symbol && item.date.getTime() == dividend.date.getTime());
+            if (taxIndex == -1) {
+              continue;//not taxed
+            }
+            const tax = taxes[taxIndex];
+            dividend.withholdingTax = tax.amount;
+            dividend.withholdingCurrency = tax.currency;
+            taxes.splice(taxIndex, 1);
           }
-          const tax = taxes[taxIndex];
-          dividend.withholdingTax = tax.amount;
-          dividend.withholdingCurrency = tax.currency;
-          taxes.splice(taxIndex, 1);
         }
         if (taxes.length > 0) {
           for (let index = 0; index < taxes.length; index++) {
@@ -618,7 +625,6 @@
             });
 
           }
-          //throw "Unsupported case occured"
         }
         return combined;
       }
@@ -828,7 +834,7 @@
                   'op',
                   { compute: x => x.date.format(DATETIME_FORMAT) },
                   { compute: x => formatNumber(x.quantity, 2) },
-                  { compute: x => formatNumber(x.tradePrice, 2) },
+                  { compute: x => formatNumber(x.tradePrice, 3) },
                   'currency',
                   { compute: x => formatNumber(x.commission, 2) }]);
                 break;
